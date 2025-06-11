@@ -7,10 +7,20 @@ use std::{
 use bytes::{Buf, BufMut, BytesMut};
 use pin_project_lite::pin_project;
 
-use crate::AsyncBufRead;
 use crate::io::{AsyncRead, AsyncWrite, ReadBuf};
+use crate::{AsyncBufPassthrough, AsyncBufRead};
 
 pin_project! {
+    /// The `AsyncBufReader` struct adds buffering to any reader.
+    ///
+    /// This allows for both efficient reading of small amounts of data and
+    /// peeking for parsing were you will want to read the data multiple times.
+    /// The internal buffer of `AsyncBufReader` will expand based on the requested
+    /// amount of data.
+    ///
+    /// When the `AsyncBufReader` is dropped, the contents of its buffer will be
+    /// discarded. Creating multiple instances of a `AsyncBufReader` on the same
+    /// stream can cause data loss.
     pub struct AsyncBufReader<R> {
         #[pin]
         reader: R,
@@ -34,18 +44,6 @@ impl<R: AsyncRead> AsyncBufReader<R> {
             passthrough: false,
             chunk_size,
         }
-    }
-
-    /// Set the buffer to start acting as a passthrough for the underlying reader.
-    ///
-    /// When the buffer is in passthrough mode, it will not buffer any additional data.
-    /// It will first exhaust the current buffer and then use the underlying reader to
-    /// read more data afterward.
-    ///
-    /// This is useful when you need to peek data only at the beginning of a stream
-    /// to determine how to parse it, but then don't need to buffer the rest of the stream.
-    pub fn passthrough(&mut self, passthrough: bool) {
-        self.passthrough = passthrough;
     }
 
     /// Returns the current capacity of the internal buffer.
@@ -88,6 +86,12 @@ impl<R: AsyncRead> AsyncBufReader<R> {
         let me = self.project();
         // Force drop the buffer to ensure the memory is freed
         *me.buf = BytesMut::new();
+    }
+}
+
+impl<R> AsyncBufPassthrough for AsyncBufReader<R> {
+    fn passthrough(&mut self, passthrough: bool) {
+        self.passthrough = passthrough;
     }
 }
 

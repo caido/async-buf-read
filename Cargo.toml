@@ -9,12 +9,19 @@ path = "src/lib.rs"
 
 [features]
 default = ["tokio"]
+
+# Tokio IO
+all-tokio = ["tokio"]
 tokio = ["dep:tokio"]
+tokio-rustls = ["dep:tokio-rustls"]
+tokio-openssl = ["dep:tokio-openssl"]
 
 [dependencies]
 bytes = "1"
 pin-project-lite = "0.2"
 tokio = { version = "1", default-features = false, optional = true }
+tokio-rustls = { version = "0.26", default-features = false, optional = true }
+tokio-openssl = { version = "0.6", default-features = false, optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", default-features = false, features = [

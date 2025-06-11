@@ -4,14 +4,21 @@ use std::task::{Context, Poll};
 
 pub use self::buf_read_ext::AsyncBufReadExt;
 pub use self::buf_reader::AsyncBufReader;
-use self::io::AsyncRead;
+pub use self::passthrough::AsyncBufPassthrough;
 
 mod buf_read_ext;
 mod buf_reader;
 mod io;
+mod passthrough;
 mod peek;
 
-pub trait AsyncBufRead: AsyncRead {
+/// Reads bytes asynchronously and buffers them.
+///
+/// Utilities for working with `AsyncBufRead` values are provided by
+/// [`AsyncBufReadExt`].
+///
+/// [`AsyncBufReadExt`]: crate::AsyncBufReadExt
+pub trait AsyncBufRead: io::AsyncRead {
     /// Attempts to return the contents of the internal buffer, filling it with more
     /// data from the inner reader if it less than the requested amount.
     ///

@@ -122,11 +122,11 @@ impl<R: AsyncRead> AsyncRead for AsyncBufReader<R> {
 }
 
 impl<R: AsyncRead> AsyncBufRead for AsyncBufReader<R> {
-    fn poll_fill_buf(
-        self: Pin<&mut Self>,
+    fn poll_fill_buf<'a>(
+        self: Pin<&'a mut Self>,
         cx: &mut Context<'_>,
         amt: usize,
-    ) -> Poll<io::Result<&[u8]>> {
+    ) -> Poll<io::Result<&'a [u8]>> {
         let me = self.project();
 
         // If the buffer has enough data, return it

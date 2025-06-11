@@ -132,6 +132,12 @@ impl<R: AsyncRead> AsyncBufRead for AsyncBufReader<R> {
     ) -> Poll<io::Result<&'a [u8]>> {
         let me = self.project();
 
+        // If we are in passthrough mode, don't attempt to fill the buffer.
+        if *me.passthrough {
+            let rem = std::cmp::min(amt, me.buf.len());
+            return Poll::Ready(Ok(&me.buf[..rem]));
+        }
+
         // If the buffer has enough data, return it
         if me.buf.len() >= amt {
             return Poll::Ready(Ok(&me.buf[..amt]));

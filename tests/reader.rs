@@ -71,3 +71,32 @@ async fn test_buffered_reader_basic() {
 
     assert_eq!(reader.read(&mut buf).await.unwrap(), 0);
 }
+
+#[tokio::test]
+async fn test_buffered_reader_expand() {
+    let inner: &[u8] = &[5, 6, 7, 0, 1, 2, 3, 4, 11, 10, 9, 8, 13, 12, 14, 15];
+    let mut reader = AsyncBufReader::with_chunk_size(1, inner);
+
+    let mut buf = [0, 0, 0, 0];
+    let nread = reader.read(&mut buf).await.unwrap();
+    assert_eq!(nread, 4);
+    assert_eq!(buf, [5, 6, 7, 0]);
+    assert_eq!(reader.capacity(), 4);
+    assert_eq!(reader.buffer(), [1, 2, 3, 4]);
+
+    let mut buf = [0, 0, 0, 0, 0];
+    let nread = reader.read(&mut buf).await.unwrap();
+    assert_eq!(nread, 5);
+    assert_eq!(buf, [1, 2, 3, 4, 11]);
+    assert_eq!(reader.capacity(), 3);
+    assert_eq!(reader.buffer(), [10, 9, 8]);
+
+    let mut buf = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    let nread = reader.read(&mut buf).await.unwrap();
+    assert_eq!(nread, 7);
+    assert_eq!(buf, [10, 9, 8, 13, 12, 14, 15, 0, 0, 0, 0, 0]);
+    assert_eq!(reader.capacity(), 5);
+    assert_eq!(reader.buffer(), []);
+
+    assert_eq!(reader.read(&mut buf).await.unwrap(), 0);
+}

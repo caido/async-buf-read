@@ -49,6 +49,21 @@ impl<R: AsyncRead> AsyncBufReader<R> {
         self.passthrough = passthrough;
     }
 
+    /// Returns the current capacity of the internal buffer.
+    pub fn capacity(&self) -> usize {
+        self.buf.capacity()
+    }
+
+    /// Returns the current length of the internal buffer.
+    pub fn len(&self) -> usize {
+        self.buf.len()
+    }
+
+    /// Returns true if the internal buffer is empty.
+    pub fn is_empty(&self) -> bool {
+        self.buf.is_empty()
+    }
+
     /// Gets a reference to the underlying reader.
     ///
     /// It is inadvisable to directly read from the underlying reader.
@@ -119,7 +134,7 @@ impl<R: AsyncRead> AsyncBufRead for AsyncBufReader<R> {
             return Poll::Ready(Ok(&me.buf[..amt]));
         } else {
             // Check if we have enough space in the buffer
-            if me.buf.capacity() - me.buf.len() < amt {
+            if me.buf.capacity() < amt {
                 me.buf
                     .reserve(std::cmp::max(*me.chunk_size, amt - me.buf.len()));
             }

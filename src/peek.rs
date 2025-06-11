@@ -1,10 +1,8 @@
-use std::{
-    future::Future,
-    io,
-    marker::PhantomPinned,
-    pin::Pin,
-    task::{Context, Poll},
-};
+use std::future::Future;
+use std::io;
+use std::marker::PhantomPinned;
+use std::pin::Pin;
+use std::task::{Context, Poll};
 
 use pin_project_lite::pin_project;
 

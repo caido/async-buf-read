@@ -6,10 +6,9 @@ use std::{
 
 use bytes::{Buf, BufMut, BytesMut};
 use pin_project_lite::pin_project;
-#[cfg(feature = "tokio")]
-use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
 use crate::AsyncBufRead;
+use crate::io::{AsyncRead, AsyncWrite, ReadBuf};
 
 pin_project! {
     pub struct AsyncBufReader<R> {

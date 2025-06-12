@@ -125,8 +125,15 @@ async fn test_buf_reader_read_expand() {
 
     let mut buf = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     let nread = reader.read(&mut buf).await.unwrap();
-    assert_eq!(nread, 8);
-    assert_eq!(buf, [11, 10, 9, 8, 13, 12, 14, 15, 0, 0, 0, 0]);
+    assert_eq!(nread, 2);
+    assert_eq!(buf, [11, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    assert_eq!(reader.capacity(), 0);
+    assert_eq!(reader.buffer(), []);
+
+    let mut buf = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    let nread = reader.read(&mut buf).await.unwrap();
+    assert_eq!(nread, 6);
+    assert_eq!(buf, [9, 8, 13, 12, 14, 15, 0, 0, 0, 0, 0, 0]);
     assert_eq!(reader.capacity(), 0);
     assert_eq!(reader.buffer(), []);
 
@@ -173,13 +180,15 @@ async fn test_buf_reader_passthrough() {
 
     let mut buf = [0, 0, 0, 0, 0, 0, 0, 0];
     let nread = reader.read(&mut buf).await.unwrap();
-    assert_eq!(nread, 8);
-    assert_eq!(buf, [5, 6, 7, 0, 1, 2, 3, 4]);
+    assert_eq!(nread, 5);
+    assert_eq!(buf, [5, 6, 7, 0, 1, 0, 0, 0]);
     assert_eq!(reader.capacity(), 0);
     assert_eq!(reader.buffer(), []);
 
-    let buf = reader.peek(4).await.unwrap();
-    assert_eq!(buf, []);
+    let mut buf = [0, 0, 0, 0, 0, 0, 0, 0];
+    let nread = reader.read(&mut buf).await.unwrap();
+    assert_eq!(nread, 5);
+    assert_eq!(buf, [2, 3, 4, 11, 10, 0, 0, 0]);
     assert_eq!(reader.capacity(), 0);
     assert_eq!(reader.buffer(), []);
 }

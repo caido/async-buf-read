@@ -117,9 +117,10 @@ impl<R: AsyncRead> AsyncRead for AsyncBufReader<R> {
                 if self.buf.is_empty() && self.passthrough {
                     self.as_mut().discard_buffer();
                 }
-                if buf.remaining() == 0 {
-                    return Poll::Ready(Ok(()));
-                }
+                // Always return if we had some data in the buffer because
+                // we don't know if the underlying reader has more data, only
+                // the user knows.
+                return Poll::Ready(Ok(()));
             }
             if self.eof {
                 return Poll::Ready(Ok(()));

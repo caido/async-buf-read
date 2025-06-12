@@ -135,6 +135,14 @@ impl<R: AsyncRead> AsyncRead for AsyncBufReader<R> {
 }
 
 impl<R: AsyncRead> AsyncBufRead for AsyncBufReader<R> {
+    fn eof(self: Pin<&Self>) -> bool {
+        self.get_ref().eof
+    }
+
+    fn buf(self: Pin<&Self>) -> &[u8] {
+        self.get_ref().buffer()
+    }
+
     fn poll_fill_buf<'a>(
         self: Pin<&'a mut Self>,
         cx: &mut Context<'_>,

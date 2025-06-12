@@ -5,6 +5,22 @@ use crate::peek::{Peek, peek};
 ///
 /// [`AsyncBufRead`]: crate::AsyncBufRead
 pub trait AsyncBufReadExt: AsyncBufRead {
+    /// Returns true if the inner reader has reached EOF.
+    fn ended(&self) -> bool
+    where
+        Self: Unpin,
+    {
+        std::pin::Pin::new(self).eof()
+    }
+
+    /// Returns a slice of the internal buffer.
+    fn buffer(&self) -> &[u8]
+    where
+        Self: Unpin,
+    {
+        std::pin::Pin::new(self).buf()
+    }
+
     /// Peek into the content of the internal buffer, filling it with more
     /// data from the inner reader if it less than the requested amount.
     ///
@@ -14,7 +30,7 @@ pub trait AsyncBufReadExt: AsyncBufRead {
     /// with the number of bytes that are consumed from this buffer to
     /// ensure that the bytes are not returned by `read`.
     ///
-    /// An empty buffer returned indicates that the stream has reached EOF.
+    /// To check if the inner reader has reached EOF, use [`ended`].
     ///
     /// Equivalent to:
     ///
@@ -34,6 +50,7 @@ pub trait AsyncBufReadExt: AsyncBufRead {
     /// then it is guaranteed that no data was read.
     ///
     /// [`consume`]: crate::AsyncBufReadExt::consume
+    /// [`ended`]: crate::AsyncBufReadExt::ended
     fn peek(&mut self, amt: usize) -> Peek<'_, Self>
     where
         Self: Unpin,

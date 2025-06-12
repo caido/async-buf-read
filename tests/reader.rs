@@ -42,6 +42,36 @@ impl AsyncRead for MaybePending<'_> {
     }
 }
 
+struct AlwaysPending<'a> {
+    inner: &'a [u8],
+    ready_read: bool,
+}
+
+impl<'a> AlwaysPending<'a> {
+    fn new(inner: &'a [u8]) -> Self {
+        Self {
+            inner,
+            ready_read: true,
+        }
+    }
+}
+
+impl AsyncRead for AlwaysPending<'_> {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        if self.ready_read {
+            self.ready_read = false;
+            Pin::new(&mut self.inner).poll_read(cx, buf)
+        } else {
+            cx.waker().wake_by_ref();
+            Poll::Pending
+        }
+    }
+}
+
 #[tokio::test]
 async fn test_buf_reader_read_basic() {
     let inner: &[u8] = &[5, 6, 7, 0, 1, 2, 3, 4];
@@ -211,4 +241,44 @@ async fn test_buf_reader_cancel_safety() {
     assert_eq!(buf, [5, 6, 7, 0, 1, 2, 3, 4]);
     assert_eq!(reader.capacity(), 8);
     assert_eq!(reader.buffer(), [5, 6, 7, 0, 1, 2, 3, 4]);
+}
+
+#[tokio::test]
+async fn test_buf_reader_always_pending() {
+    let buffer: &[u8] = &[5, 6, 7, 0];
+    let inner = AlwaysPending::new(buffer);
+    let mut reader = AsyncBufReader::with_chunk_size(10, inner);
+
+    // Peek once
+    let buf = reader.peek(10).await.unwrap();
+    assert_eq!(buf, [5, 6, 7, 0]);
+    assert_eq!(reader.capacity(), 10);
+    assert_eq!(reader.buffer(), [5, 6, 7, 0]);
+
+    // Peek again future
+    let future = reader.peek(10);
+    pin!(future);
+    let res = poll!(future);
+    assert!(res.is_pending());
+}
+
+#[tokio::test]
+async fn test_buf_reader_eof() {
+    let buffer: &[u8] = &[5, 6, 7, 0, 1, 2, 3, 4, 11, 10];
+    let inner = MaybePending::new(buffer);
+    let mut reader = AsyncBufReader::with_chunk_size(20, inner);
+
+    // Peek once
+    let buf = reader.peek(20).await.unwrap();
+    assert_eq!(buf, [5, 6, 7, 0, 1, 2, 3, 4, 11, 10]);
+    assert_eq!(reader.capacity(), 20);
+    assert!(!reader.ended());
+    assert_eq!(reader.buffer(), [5, 6, 7, 0, 1, 2, 3, 4, 11, 10]);
+
+    // Peek once
+    let buf = reader.peek(20).await.unwrap();
+    assert_eq!(buf, [5, 6, 7, 0, 1, 2, 3, 4, 11, 10]);
+    assert_eq!(reader.capacity(), 20);
+    assert!(reader.ended());
+    assert_eq!(reader.buffer(), [5, 6, 7, 0, 1, 2, 3, 4, 11, 10]);
 }

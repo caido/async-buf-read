@@ -19,6 +19,12 @@ mod peek;
 ///
 /// [`AsyncBufReadExt`]: crate::AsyncBufReadExt
 pub trait AsyncBufRead: io::AsyncRead {
+    /// Returns true if the inner reader has reached EOF.
+    fn eof(self: Pin<&Self>) -> bool;
+
+    /// Returns a slice of the internal buffer.
+    fn buf(self: Pin<&Self>) -> &[u8];
+
     /// Attempts to return the contents of the internal buffer, filling it with more
     /// data from the inner reader if it less than the requested amount.
     ///
@@ -35,10 +41,11 @@ pub trait AsyncBufRead: io::AsyncRead {
     /// with the number of bytes that are consumed from this buffer to
     /// ensure that the bytes are not returned by [`poll_read`].
     ///
-    /// An empty buffer returned indicates that the stream has reached EOF.
+    /// To check if the inner reader has reached EOF, use [`eof`].
     ///
     /// [`poll_read`]: AsyncRead::poll_read
     /// [`consume`]: AsyncBufRead::consume
+    /// [`eof`]: AsyncBufRead::eof
     fn poll_fill_buf<'a>(
         self: Pin<&'a mut Self>,
         cx: &mut Context<'_>,
@@ -65,6 +72,14 @@ pub trait AsyncBufRead: io::AsyncRead {
 
 macro_rules! deref_async_buf_read {
     () => {
+        fn eof(self: Pin<&Self>) -> bool {
+            Pin::new(&**self.get_ref()).eof()
+        }
+
+        fn buf(self: Pin<&Self>) -> &[u8] {
+            Pin::new(&**self.get_ref()).buf()
+        }
+
         fn poll_fill_buf(
             self: Pin<&mut Self>,
             cx: &mut Context<'_>,
@@ -92,6 +107,14 @@ where
     P: DerefMut + Unpin,
     P::Target: AsyncBufRead,
 {
+    fn eof(self: Pin<&Self>) -> bool {
+        self.get_ref().as_ref().eof()
+    }
+
+    fn buf(self: Pin<&Self>) -> &[u8] {
+        self.get_ref().as_ref().buf()
+    }
+
     fn poll_fill_buf(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -106,12 +129,21 @@ where
 }
 
 impl AsyncBufRead for &[u8] {
+    fn eof(self: Pin<&Self>) -> bool {
+        false
+    }
+
+    fn buf(self: Pin<&Self>) -> &[u8] {
+        self.get_ref()
+    }
+
     fn poll_fill_buf(
         self: Pin<&mut Self>,
         _cx: &mut Context<'_>,
-        _amt: usize,
+        amt: usize,
     ) -> Poll<io::Result<&[u8]>> {
-        Poll::Ready(Ok(*self))
+        let amt = std::cmp::min(self.len(), amt);
+        Poll::Ready(Ok(&self[..amt]))
     }
 
     fn consume(mut self: Pin<&mut Self>, amt: usize) {

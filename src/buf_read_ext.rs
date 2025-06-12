@@ -9,7 +9,7 @@ pub trait AsyncBufReadExt: AsyncBufRead {
     /// data from the inner reader if it less than the requested amount.
     ///
     /// This function doesn't consume the data, it only returns a slice up
-    /// to the requested amount. This means that subsequent calls to [`read`]
+    /// to the requested amount. This means that subsequent calls to `read`
     /// will return the same contents. As such, [`consume`] can be called
     /// with the number of bytes that are consumed from this buffer to
     /// ensure that the bytes are not returned by `read`.
@@ -30,10 +30,9 @@ pub trait AsyncBufReadExt: AsyncBufRead {
     /// # Cancel safety
     ///
     /// This method is cancel safe. If you use it as the event in a
-    /// [`tokio::select!`](crate::select) statement and some other branch
-    /// completes first, then it is guaranteed that no data was read.
+    /// `select!` statement and some other branch completes first,
+    /// then it is guaranteed that no data was read.
     ///
-    /// [`read`]: crate::io::AsyncReadExt::read
     /// [`consume`]: crate::AsyncBufReadExt::consume
     fn peek(&mut self, amt: usize) -> Peek<'_, Self>
     where

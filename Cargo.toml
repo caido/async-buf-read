@@ -1,6 +1,6 @@
 [package]
 name = "async_buf_read"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Caido Labs Inc. <dev@caido.io>"]
 description = "Async Buffer Reader for IO"
 repository = "https://github.com/caido/async-buf-read"
@@ -15,7 +15,7 @@ path = "src/lib.rs"
 default = ["tokio"]
 
 # Tokio IO
-all-tokio = ["tokio"]
+all-tokio = ["tokio", "tokio-rustls", "tokio-openssl"]
 tokio = ["dep:tokio"]
 tokio-rustls = ["dep:tokio-rustls"]
 tokio-openssl = ["dep:tokio-openssl"]

@@ -1,6 +1,10 @@
 [package]
-name = "async-buf-read"
+name = "async_buf_read"
 version = "0.1.0"
+authors = ["Caido Labs Inc. <dev@caido.io>"]
+description = "Async Buffer Reader for IO"
+repository = "https://github.com/caido/async-buf-read"
+license = "MIT"
 edition = "2024"
 
 [lib]

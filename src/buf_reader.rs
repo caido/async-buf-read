@@ -27,22 +27,28 @@ pin_project! {
         passthrough: bool,
         buf: BytesMut,
         chunk_size: usize,
+        eof: bool,
     }
 }
 
 const DEFAULT_CHUNK_SIZE: usize = 8 * 1024;
 
 impl<R: AsyncRead> AsyncBufReader<R> {
+    /// Creates a new `AsyncBufReader` with the default chunk size.
     pub fn new(reader: R) -> Self {
         Self::with_chunk_size(DEFAULT_CHUNK_SIZE, reader)
     }
 
+    /// Creates a new `AsyncBufReader` with the given chunk size.
+    ///
+    /// The chunk size is a hint for the amount of data that will be read into the buffer at once.
     pub fn with_chunk_size(chunk_size: usize, reader: R) -> Self {
         Self {
             reader,
             buf: BytesMut::with_capacity(chunk_size),
             passthrough: false,
             chunk_size,
+            eof: false,
         }
     }
 
@@ -90,8 +96,8 @@ impl<R: AsyncRead> AsyncBufReader<R> {
 }
 
 impl<R> AsyncBufPassthrough for AsyncBufReader<R> {
-    fn passthrough(&mut self, passthrough: bool) {
-        self.passthrough = passthrough;
+    fn passthrough(&mut self, enabled: bool) {
+        self.passthrough = enabled;
     }
 }
 
@@ -101,18 +107,22 @@ impl<R: AsyncRead> AsyncRead for AsyncBufReader<R> {
         cx: &mut Context<'_>,
         buf: &mut ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
-        // In passthrough, empty the buffer then pass through the read to the underlying reader.
-        if self.passthrough {
+        // In passthrough mode or if the requested amount of data is greater than the chunk size,
+        // empty the buffer then pass through the read to the underlying reader.
+        if self.passthrough || buf.remaining() >= self.chunk_size {
             if !self.buf.is_empty() {
                 let amt = std::cmp::min(buf.remaining(), self.buf.len());
                 buf.put_slice(&self.buf[..amt]);
                 self.as_mut().consume(amt);
-                if self.buf.is_empty() {
+                if self.buf.is_empty() && self.passthrough {
                     self.as_mut().discard_buffer();
                 }
                 if buf.remaining() == 0 {
                     return Poll::Ready(Ok(()));
                 }
+            }
+            if self.eof {
+                return Poll::Ready(Ok(()));
             }
             return self.get_pin_mut().poll_read(cx, buf);
         }
@@ -132,8 +142,9 @@ impl<R: AsyncRead> AsyncBufRead for AsyncBufReader<R> {
     ) -> Poll<io::Result<&'a [u8]>> {
         let me = self.project();
 
-        // If we are in passthrough mode, don't attempt to fill the buffer.
-        if *me.passthrough {
+        // If we are in passthrough mode or at EOF, return the buffer.
+        // Don't attempt to fill the buffer with more data.
+        if *me.passthrough || *me.eof {
             let rem = std::cmp::min(amt, me.buf.len());
             return Poll::Ready(Ok(&me.buf[..rem]));
         }
@@ -152,6 +163,9 @@ impl<R: AsyncRead> AsyncBufRead for AsyncBufReader<R> {
         let mut buf = ReadBuf::uninit(me.buf.spare_capacity_mut());
         ready!(me.reader.poll_read(cx, &mut buf))?;
         let n = buf.filled().len();
+        if n == 0 {
+            *me.eof = true;
+        }
         unsafe {
             // SAFETY: We know that filled will be at maximum the spared capacity and
             // won't exceed the buffer's capacity

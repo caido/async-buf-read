@@ -56,3 +56,5 @@ pub trait AsyncBufReadExt: AsyncBufRead {
         std::pin::Pin::new(self).consume(amt);
     }
 }
+
+impl<R: AsyncBufRead + ?Sized> AsyncBufReadExt for R {}

@@ -1,6 +1,6 @@
 # AsyncBufRead
 
-[<img alt="github" src="https://img.shields.io/badge/github-caido/async-buf-read-8da0cb?style=for-the-badge&labelColor=555555&logo=github" height="20">](https://github.com/caido/async_buf_read)
+[<img alt="github" src="https://img.shields.io/badge/github-caido/async_buf_read-8da0cb?style=for-the-badge&labelColor=555555&logo=github" height="20">](https://github.com/caido/async_buf_read)
 [<img alt="crates.io" src="https://img.shields.io/crates/v/async-buf-read?color=fc8d62&logo=rust&style=for-the-badge" height="20">](https://crates.io/crates/async_buf_read)
 
 The goal of the library is to provide a better `AsyncBufRead` interface (and corresponding `AsyncBufReader`) than what is available in the runtimes like `tokio`.
